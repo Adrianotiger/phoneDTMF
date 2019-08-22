@@ -25,10 +25,12 @@ Released into the public domain.
 
 // include types & constants of Wiring core API
 #include "Arduino.h"
+
 // library interface description
 class PhoneDTMF
 {
 private:
+  static const uint32_t MAX_FREQ = 6000;
   static const uint8_t  TONES = 8;
   const uint16_t DTMF_TONES[TONES] =
     {
@@ -45,11 +47,9 @@ private:
   const char  DTMF_CHAR[TONES * 2] =   { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'A', 'B', 'C', 'D', '*', '#'};
     // Number of samples to detect tone (normally from 50 to 200)
   int16_t	_iSamplesCount;
-	// Maximal frequence for sampling => is calculated in the Init function
+	  // Maximal frequence for sampling => is calculated in the Init function
     // Note: this should be at least 6000Hz, since the measurement is done with this frequence
   uint32_t	_iSamplesFrequence;
-    // Amplify the analog input if this does not have the full range (normally 1.0 to 5.0)
-  float		_fAmplifier;
 	// The real sampling frequence from the last measurement
   uint32_t  _iRealFrequence;
 	// If the real frequence is not like expected, a compensation delay is applied
@@ -70,21 +70,16 @@ private:
   // user-accessible "public" interface
 public:
     
-  PhoneDTMF(int16_t sampleCount = 128, float amplifier = 1.0f);
-  uint16_t begin(uint8_t sensorPin);
+  PhoneDTMF(int16_t sampleCount = 128);
+  uint16_t begin(uint8_t sensorPin, uint32_t maxFrequence = MAX_FREQ);
   uint8_t detect(float* pMagnitudes = NULL, float magnitude = -1.0f);
-	
-	// utility function to get the maximal frequence the processor can reach
-  uint32_t getSampleFrequence();
-    // utility function to get the real frequence of the last measurement
-  uint32_t getRealFrequence();
-    // utility function to get the center of the analog input when nothing is detected
-  uint16_t getAnalogCenter();
-    // utility function to get the middle magnitude when nothing is detected
-  uint16_t getBaseMagnitude();
-    // utility function to get the time of the measurement (based on frequence and samples)
-  uint16_t getMeasurementTime();
   char tone2char(uint8_t dtmf);
+	
+  uint32_t getSampleFrequence();
+  uint32_t getRealFrequence();
+  uint16_t getAnalogCenter();
+  uint16_t getBaseMagnitude();
+  uint16_t getMeasurementTime();
   
   // library-accessible "private" interface
 private:

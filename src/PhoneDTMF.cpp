@@ -23,28 +23,26 @@ Released into the public domain.
 */
 
 // include this library's description file
-#include "DTMF.h"
-
-#define MAX_FREQ 6000.0f
+#include "PhoneDTMF.h"
 
   /// <summary>Constructor, you can set 2 params, if you don't like the standard behaviour</summary>
   /// <param name="sampleCount">number of measurements, default is 128 (with a frequence of 6000Hz it means 128 * 1/6000 = 21.3ms for each measurement). Normal values are from 50 to 200.</param>
-  /// <param name="amplifier">use amplifier if your signal does cover only 1/5 or 1/10 of the maximal amplitude (an opamp would be better)</param>
-PhoneDTMF::PhoneDTMF(int16_t sampleCount, float amplifier)
+PhoneDTMF::PhoneDTMF(int16_t sampleCount)
 {               
   _iSamplesCount = sampleCount; 
-  _fAmplifier = amplifier;
   _iCompensation = 0;
   _fBaseMagnitude = 0.0f;
   _iSamplesFrequence = MAX_FREQ;
+  _iRealFrequence = 0;
 }
 
   /// <summary>Init the module (calculate frequence, ADC center, coefficients)</summary>
   /// <remarks>even if the frequence could be 25-50kHz, many microcontroller have a limited ADC reading frequence. 
   /// For example the ESP32 is able to execute readAnalogInput 25.000 times each second but internally it read the inputs only 6000 times.</remarks>
   /// <param name="sensorPin">the pin used to detect the DTMF</param>
-  /// <returns>maximal frequence available on this processor</returns>
-uint16_t PhoneDTMF::begin(uint8_t sensorPin)
+  /// <param name="maxFrequence">maximal frequence to sample DTMF (default is MAX_FREQ = 6000Hz)</param>
+  /// <returns>the REAL sample frequence used to detect signal (&lt;=MAX_FREQ)</returns>
+uint16_t PhoneDTMF::begin(uint8_t sensorPin, uint32_t maxFrequence)
 {
   _Pin = sensorPin;
   pinMode(_Pin, INPUT);
@@ -58,12 +56,21 @@ uint16_t PhoneDTMF::begin(uint8_t sensorPin)
   t1 = millis() - t1;
   float sampleFrequence = (1000.0f / t1) * 1000.0f; 
   //sampleFrequence *= 0.5;
-  if (sampleFrequence > MAX_FREQ) _iCompensation = ((1000.0f / MAX_FREQ) - (1000.0f / sampleFrequence)) * 1000.0f;
+  if (sampleFrequence > maxFrequence) _iCompensation = ((1000.0f / (float)maxFrequence) - (1000.0f / (float)sampleFrequence)) * 1000.0f;
   
   _iAdcCentre = analogRead(_Pin);
-  _iSamplesFrequence = (uint16_t)sampleFrequence;
+  _iSamplesFrequence = (uint32_t)sampleFrequence;
+  
+  uint32_t oldFreq;
+  do
+  {
+    oldFreq = _iRealFrequence;
+    detect(magnitudes);
+    if (_iRealFrequence > maxFrequence  && _iCompensation < 200) _iCompensation++;
+    if (_iRealFrequence < maxFrequence - 150 && _iCompensation > 0) _iCompensation--;
+  } while (oldFreq != _iRealFrequence);
 
-  calculateMeasurement(magnitudes);
+  _fBaseMagnitude = 0.0f;
   for (uint8_t j = 0; j < TONES; j++)
 	  _fBaseMagnitude += magnitudes[j];
   _fBaseMagnitude /= TONES;
@@ -72,17 +79,17 @@ uint16_t PhoneDTMF::begin(uint8_t sensorPin)
   // Calculate the coefficient for each DTMF tone
   for(uint8_t i=0; i<TONES; i++) 
   {
-    omega = (2.0f * PI * DTMF_TONES[i]) / MAX_FREQ;
+    omega = (2.0f * PI * DTMF_TONES[i]) / _iRealFrequence;
     
     // DTMF detection doesn't need the phase.
     // Computation of the magnitudes (which DTMF does need) does not
     // require the value of the sin.
     // not needed    sine = sin(omega);
-	_afToneCoeff[i] = 2.0f * cos(omega);
+	  _afToneCoeff[i] = 2.0f * cos(omega);
   }
   ResetDTMF();
 
-  return _iSamplesFrequence;
+  return _iRealFrequence;
 }
 
   /// <summary>Detect the frequences</summary>
@@ -99,8 +106,6 @@ uint8_t PhoneDTMF::detect(float* pMagnitudes, float magnitude)
   }
   fTemp = millis() - fTemp;
   _iRealFrequence = 1.0f / ((fTemp / 1000.0f) / _iSamplesCount);
-  if (_iRealFrequence > MAX_FREQ + 50 && _iCompensation < 200) _iCompensation++;
-  if (_iRealFrequence < MAX_FREQ - 150 && _iCompensation > 100) _iCompensation--;
   return calculateMeasurement(pMagnitudes, magnitude);
 }
 
@@ -154,9 +159,11 @@ uint8_t PhoneDTMF::calculateMeasurement(float* pRet, float magnitude)
 {
   float dtmf_mag[TONES];
   float maxMag = _fBaseMagnitude * 3.0f;
+  float midMag = 0.0f;
   for (uint8_t i = 0; i < TONES; i++)
   {
     dtmf_mag[i] = sqrt(_afQ1[i] * _afQ1[i] + _afQ2[i] * _afQ2[i] - _afToneCoeff[i] * _afQ1[i] * _afQ2[i]);
+    midMag += dtmf_mag[i];
     if (maxMag < dtmf_mag[i]) maxMag = dtmf_mag[i];
   }
   if (pRet != NULL)
@@ -166,7 +173,10 @@ uint8_t PhoneDTMF::calculateMeasurement(float* pRet, float magnitude)
   ResetDTMF();
 
   uint8_t dtmf = 0;
-  if (magnitude < 0.0f) magnitude = maxMag - (maxMag - _fBaseMagnitude) * 0.3f;
+  if (magnitude < 0.0f) 
+  {
+    magnitude = (midMag / TONES) * 3.0f;
+  }
 
   for (uint8_t i = 0; i < TONES; i++)
   {
@@ -194,7 +204,7 @@ void PhoneDTMF::ProcessSample(int16_t sample)
   //EL_Supremo subtract adc_centre to offset the sample correctly
   for (uint8_t i = 0; i < TONES; i++)
   {
-    Q0 = _afToneCoeff[i] * _afQ1[i] - _afQ2[i] + (float)(sample - _iAdcCentre) * _fAmplifier;
+    Q0 = _afToneCoeff[i] * _afQ1[i] - _afQ2[i] + (float)(sample - _iAdcCentre);
     _afQ2[i] = _afQ1[i];
     _afQ1[i] = Q0;
   }

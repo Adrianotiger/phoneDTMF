@@ -1,0 +1,24 @@
+{
+  "name": "phoneDTMF-arduino",
+  "version": "0.1.0",
+  "description": "Arduino Library implementation to detect DTMF on ADC input ",
+  "main": "PhoneDTMF.cpp",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Adrianotiger/phoneDTMF.git"
+  },
+  "keywords": [
+    "arduino-libarary"
+  ],
+  "author": "Adriano Petrucci",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Adrianotiger/phoneDTMF/issues"
+  }
+}
