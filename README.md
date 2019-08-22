@@ -1,7 +1,7 @@
 # PhoneDTMF
 **Arduino library to detect DTMF without any external devices.**
 When you use a MCU to decode a DTMF, you don't need an external device like the MT8870. You just need the ADC input and you will be able to detect the tones with simple algorithms (see Goertzel Algorithm).  
-This library is a simple but efficient way to detect telephone tones on microcontrollers like Arduino UNO, ESP8266, ESP32 or Teensy (Teensy has a more powerfull library).  
+This library is a simple but efficient way to detect telephone tones on microcontrollers like Arduino UNO, ESP8266, ESP32 or Teensy (Teensy has a more powerful library).  
 
 <img alt="Display spectrum" src="circuits/oled.jpg" width="300" />
 
@@ -25,24 +25,24 @@ void loop() {
 
 ###### PhoneDTMF(int16_t sampleCount = 128)
 > Constructor to init the library.  
-> Set ***sampleCount*** to define how many times the analog input should be sampled on each request. It must be at least 50 if you want a good result. 50 to 200 are standard values. Higher value gives you a better result but need more time to be executed. 128 samples with a frequence of 6000Hz need 128 \* 1 / 6000 = 21.3ms to be executed. So every call to `detect()` need 21ms.  
+> Set ***`sampleCount`*** to define how many times the analog input should be sampled on each request. It must be at least 50 if you want a good result. 50 to 200 are standard values. Higher value gives you a better result but need more time to be executed. 128 samples with a frequence of 6000Hz need 128 \* 1 / 6000 = 21.3ms to be executed. So every call to `detect()` need 21ms.  
 
 ###### uint16_t begin(uint8_t sensorPin, uint32_t maxFrequence = MAX_FREQ)
 > begin the library  
-> ***sensorPin*** is the analog pin used to detect the DTMF, must be an anlog pin.  
-> ***maxFrequence*** is the frequence you want to use for detecting the signal. MAX_FREQ is 6000Hz.  
+> ***`sensorPin`*** is the analog pin used to detect the DTMF, must be an anlog pin.  
+> ***`maxFrequence`*** is the frequence you want to use for detecting the signal. MAX_FREQ is 6000Hz.  
 > Returns the real frequence (<=MAX_FREQ) used to detect the signal.  
 
 ###### uint8_t detect(float* pMagnitudes = NULL, float magnitude = -1.0f)
 > Call this function, every time you want measure the signal. As this is a sync-function, it need some times (~20ms) to return a value. After calling this function, you can use `getRealFrequence()` to see if it was done in the right time (just for a better result), this should be the same frequence as the one returned by the `begin()` function.  
-> ***pMagnitudes*** is a pointer to an array to 8 floats. It returns the magnitudes of the 8 tones measured. Leave empty or NULL if you don't need the values.  
-> ***magnitude*** is the minimum magnitude for detecting the tones. If a tone is detected, only 2 frequences are over this magnitude. With 12bits, 128 samples and 6000Hz this should be around 2000. If you are not sure, just leave -1 or empty, so it will try to set this value automatically.  
+> ***`pMagnitudes`*** is a pointer to an array to 8 floats. It returns the magnitudes of the 8 tones measured. Leave empty or NULL if you don't need the values.  
+> ***`magnitude`*** is the minimum magnitude for detecting the tones. If a tone is detected, only 2 frequences are over this magnitude. With 12bits, 128 samples and 6000Hz this should be around 2000. If you are not sure, just leave -1 or empty, so it will try to set this value automatically.  
 > Returns the tones detected as 8-bit number (example: 0010 0001)  
 > **Remarks**: the tones detected must be exactly 2! If only 1 or 3 or 4 tones are detected, the detection failed or there wasn't a real DTMF tone to detect.  
 
 ###### char tone2char(uint8_t dtmf)
 > If you want to decode the tones to the phone button, call this function.  
-> ***dtmf*** is the value of the detected tones (see `detect()`)   
+> ***`dtmf`*** is the value of the detected tones (see `detect()`)   
 > Returns the character of your phone (example '1' or '#') or 0 if the tones are not valid.   
 
 
@@ -63,7 +63,7 @@ ___
 #include <driver/adc.h>
 void setup()
 {
-	adc1_config_width(ADC_WIDTH_BIT_12); // set 12 bit (0-4096)
+    adc1_config_width(ADC_WIDTH_BIT_12); // set 12 bit (0-4096)
     adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_0); // do not use attenuation
     dtmf.begin((uint8_t)ADC1_CHANNEL_0_GPIO_NUM); // Use ADC 1, Channel 0 (GPIO36 on Wroom32)
 }
