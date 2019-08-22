@@ -77,7 +77,7 @@ So, to remove the DC voltage, add a capacitor (2.2uF) before you connect the lin
 2 Zener  diodes and an opamp would are also good components to protect it. But if you are sure to have a right signal, you can measure directly on the bus.  
 If you want to see some circuits, for example how to connect your Arduino directly to your analog telephone, check the <a href='circuits/'>**Circuits manual**</a>.  
 
-<a href="LIBRARY.md"><img src='circuits/analogphone.png' width='200'></a>  
+<a href="circuits/"><img src='circuits/analogphone.png' width='200'></a>  
 
 
 ## Goertzel Algorithm
