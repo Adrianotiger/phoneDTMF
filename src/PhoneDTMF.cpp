@@ -175,7 +175,7 @@ uint8_t PhoneDTMF::calculateMeasurement(float* pRet, float magnitude)
   uint8_t dtmf = 0;
   if (magnitude < 0.0f) 
   {
-    magnitude = (midMag / TONES) * 3.0f;
+    magnitude = (midMag / TONES) * 2.0f;
   }
 
   for (uint8_t i = 0; i < TONES; i++)
