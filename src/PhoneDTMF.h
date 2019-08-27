@@ -26,11 +26,12 @@ Released into the public domain.
 // include types & constants of Wiring core API
 #include "Arduino.h"
 
+//#define DTMF_DEBUG
+
 // library interface description
 class PhoneDTMF
 {
 private:
-  static const uint32_t MAX_FREQ = 6000;
   static const uint8_t  TONES = 8;
   const uint16_t DTMF_TONES[TONES] =
     {
@@ -64,14 +65,21 @@ private:
   uint8_t	_Pin;
 	// The value of ADC if nothing is detected (or in stand by) => this is calculated in the Init function
   int16_t	_iAdcCentre;
+  float		_fAdcCentre;
 	// Magnitude if nothing is detected (or in stand by) => calculated in the Init function
   float		_fBaseMagnitude;
+    // Amplify measured signal, so it will be detected better (only if the signal does not cover the full amplitude)
+  float     _fAmplifier;
+#ifdef DTMF_DEBUG
+  uint16_t  _aiAnalogData[128];
+  uint8_t	_iDataIndex;
+#endif
   
   // user-accessible "public" interface
 public:
     
-  PhoneDTMF(int16_t sampleCount = 128);
-  uint16_t begin(uint8_t sensorPin, uint32_t maxFrequence = MAX_FREQ);
+  PhoneDTMF(int16_t sampleCount = 128, float amplifier = 1.0f);
+  uint16_t begin(uint8_t sensorPin, uint32_t maxFrequence = 0);
   uint8_t detect(float* pMagnitudes = NULL, float magnitude = -1.0f);
   char tone2char(uint8_t dtmf);
 	
@@ -80,6 +88,10 @@ public:
   uint16_t getAnalogCenter();
   uint16_t getBaseMagnitude();
   uint16_t getMeasurementTime();
+
+#ifdef DTMF_DEBUG
+  uint16_t* getMeasurements();
+#endif
   
   // library-accessible "private" interface
 private:

@@ -23,15 +23,16 @@ void loop() {
 }
 ~~~~
 
-###### PhoneDTMF(int16_t sampleCount = 128)
+###### PhoneDTMF(int16_t sampleCount = 128, float amplify = 1.0f)
 > Constructor to init the library.  
-> Set ***`sampleCount`*** to define how many times the analog input should be sampled on each request. It must be at least 50 if you want a good result. 50 to 200 are standard values. Higher value gives you a better result but need more time to be executed. 128 samples with a frequence of 6000Hz need 128 \* 1 / 6000 = 21.3ms to be executed. So every call to `detect()` need 21ms.  
+> Set ***`sampleCount`*** to define how many times the analog input should be sampled on each request. It must be at least 50 if you want a good result. 50 to 300 are standard values. Higher value gives you a better result but need more time to be executed. 128 samples with a frequence of 6000Hz need 128 \* 1 / 6000 = 21.3ms to be executed. So every call to `detect()` need 21ms.  
+> Set ***`amplify`*** if your signal is not good or if your signal does not cover the entire amplitude. Standard values are from 1.0 to 4.0, if you need to amplify it more than 4 times, it would be better to put an opamp on your circuit.
 
-###### uint16_t begin(uint8_t sensorPin, uint32_t maxFrequence = MAX_FREQ)
+###### uint16_t begin(uint8_t sensorPin, uint32_t maxFrequence = 0)
 > begin the library  
 > ***`sensorPin`*** is the analog pin used to detect the DTMF, must be an anlog pin.  
-> ***`maxFrequence`*** is the frequence you want to use for detecting the signal. MAX_FREQ is 6000Hz.  
-> Returns the real frequence (<=MAX_FREQ) used to detect the signal.  
+> ***`maxFrequence`*** is the frequence you want to use for detecting the signal. Leave 0 to use the maximal frequence available on your microcontroller or set the desired frequence (example 6000 for 6kHz).  
+> Returns the real frequence (&lt;=MAX_FREQ) used to detect the signal.  
 
 ###### uint8_t detect(float* pMagnitudes = NULL, float magnitude = -1.0f)
 > Call this function, every time you want measure the signal. As this is a sync-function, it need some times (~20ms) to return a value. After calling this function, you can use `getRealFrequence()` to see if it was done in the right time (just for a better result), this should be the same frequence as the one returned by the `begin()` function.  

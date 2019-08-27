@@ -27,21 +27,23 @@ Released into the public domain.
 
   /// <summary>Constructor, you can set 2 params, if you don't like the standard behaviour</summary>
   /// <param name="sampleCount">number of measurements, default is 128 (with a frequence of 6000Hz it means 128 * 1/6000 = 21.3ms for each measurement). Normal values are from 50 to 200.</param>
-PhoneDTMF::PhoneDTMF(int16_t sampleCount)
+  /// <param name="amplifier">if your signal is not good and you know that you just have 1/5 or 1/10 of the entire amplitude, you can amplify it via software with this parameter. Set a value from 1 to 5</param>
+PhoneDTMF::PhoneDTMF(int16_t sampleCount, float amplifier)
 {               
   _iSamplesCount = sampleCount; 
+  _fAmplifier = amplifier;
   _iCompensation = 0;
   _fBaseMagnitude = 0.0f;
-  _iSamplesFrequence = MAX_FREQ;
+  _iSamplesFrequence = 6000;
   _iRealFrequence = 0;
+  _fAdcCentre = 0.0f;
 }
 
   /// <summary>Init the module (calculate frequence, ADC center, coefficients)</summary>
   /// <remarks>even if the frequence could be 25-50kHz, many microcontroller have a limited ADC reading frequence. 
   /// For example the ESP32 is able to execute readAnalogInput 25.000 times each second but internally it read the inputs only 6000 times.</remarks>
   /// <param name="sensorPin">the pin used to detect the DTMF</param>
-  /// <param name="maxFrequence">maximal frequence to sample DTMF (default is MAX_FREQ = 6000Hz)</param>
-  /// <returns>the REAL sample frequence used to detect signal (&lt;=MAX_FREQ)</returns>
+  /// <param name="maxFrequence">maximal frequence to sample DTMF (set 0 if you want the maximal possible)</param>
 uint16_t PhoneDTMF::begin(uint8_t sensorPin, uint32_t maxFrequence)
 {
   _Pin = sensorPin;
@@ -54,11 +56,16 @@ uint16_t PhoneDTMF::begin(uint8_t sensorPin, uint32_t maxFrequence)
     singleDetect();
   }
   t1 = millis() - t1;
-  float sampleFrequence = (1000.0f / t1) * 1000.0f; 
-  //sampleFrequence *= 0.5;
-  if (sampleFrequence > maxFrequence) _iCompensation = ((1000.0f / (float)maxFrequence) - (1000.0f / (float)sampleFrequence)) * 1000.0f;
+  float sampleFrequence = (1000.0f / t1) * 1000.0f;
+  if (maxFrequence > 0 && sampleFrequence > maxFrequence) _iCompensation = ((1000.0f / (float)maxFrequence) - (1000.0f / (float)sampleFrequence)) * 1000.0f;
+  else maxFrequence = sampleFrequence;
   
-  _iAdcCentre = analogRead(_Pin);
+  float adcCenter = 0.0f;
+  for (uint16_t j = 0; j < 100; j++)
+  {
+	  adcCenter += (float)analogRead(_Pin) / 100.0f;
+  }
+  _iAdcCentre = adcCenter;
   _iSamplesFrequence = (uint32_t)sampleFrequence;
   
   uint32_t oldFreq;
@@ -66,8 +73,16 @@ uint16_t PhoneDTMF::begin(uint8_t sensorPin, uint32_t maxFrequence)
   {
     oldFreq = _iRealFrequence;
     detect(magnitudes);
-    if (_iRealFrequence > maxFrequence  && _iCompensation < 200) _iCompensation++;
-    if (_iRealFrequence < maxFrequence - 150 && _iCompensation > 0) _iCompensation--;
+	if (_iRealFrequence > maxFrequence  && _iCompensation < 200)
+	{
+		_iCompensation++;
+		continue;
+	}
+	if (_iRealFrequence < maxFrequence - 150 && _iCompensation > 0)
+	{
+		_iCompensation--;
+		continue;
+	}
   } while (oldFreq != _iRealFrequence);
 
   _fBaseMagnitude = 0.0f;
@@ -79,6 +94,8 @@ uint16_t PhoneDTMF::begin(uint8_t sensorPin, uint32_t maxFrequence)
   // Calculate the coefficient for each DTMF tone
   for(uint8_t i=0; i<TONES; i++) 
   {
+	  // other example: https://github.com/G6EJD/ESP32-Morse-Decoder/
+	
     omega = (2.0f * PI * DTMF_TONES[i]) / _iRealFrequence;
     
     // DTMF detection doesn't need the phase.
@@ -106,6 +123,7 @@ uint8_t PhoneDTMF::detect(float* pMagnitudes, float magnitude)
   }
   fTemp = millis() - fTemp;
   _iRealFrequence = 1.0f / ((fTemp / 1000.0f) / _iSamplesCount);
+  _iAdcCentre = (_fAdcCentre + _iAdcCentre) / 2;
   return calculateMeasurement(pMagnitudes, magnitude);
 }
 
@@ -133,7 +151,7 @@ uint16_t PhoneDTMF::getAnalogCenter()
 	return _iAdcCentre;
 }
 
-  /// <summary>returns the real frequence by measuring the tones (should be MAX_FREQ=6000)</summary>
+  /// <summary>returns the real frequence by measuring the tones</summary>
 uint32_t PhoneDTMF::getRealFrequence()
 {
 	return _iRealFrequence;
@@ -145,7 +163,7 @@ uint16_t PhoneDTMF::getBaseMagnitude()
 	return (uint16_t)_fBaseMagnitude;
 }
 
-  /// <summary>returns the time for a single measurement</summary>
+  /// <summary>returns the time in ms for a single measurement</summary>
 uint16_t PhoneDTMF::getMeasurementTime()
 {
 	return (uint16_t)((1000.0f / _iRealFrequence) * _iSamplesCount);
@@ -175,7 +193,7 @@ uint8_t PhoneDTMF::calculateMeasurement(float* pRet, float magnitude)
   uint8_t dtmf = 0;
   if (magnitude < 0.0f) 
   {
-    magnitude = (midMag / TONES) * 2.0f;
+    magnitude = (midMag / TONES) * 2.5f;
   }
 
   for (uint8_t i = 0; i < TONES; i++)
@@ -204,10 +222,17 @@ void PhoneDTMF::ProcessSample(int16_t sample)
   //EL_Supremo subtract adc_centre to offset the sample correctly
   for (uint8_t i = 0; i < TONES; i++)
   {
-    Q0 = _afToneCoeff[i] * _afQ1[i] - _afQ2[i] + (float)(sample - _iAdcCentre);
+    Q0 = _afToneCoeff[i] * _afQ1[i] - _afQ2[i] + _fAmplifier * (sample - _iAdcCentre);
     _afQ2[i] = _afQ1[i];
     _afQ1[i] = Q0;
   }
+  _fAdcCentre += (float)sample / (float)_iSamplesCount;
+#ifdef DTMF_DEBUG
+  if (_iDataIndex < 128)
+  {
+    _aiAnalogData[_iDataIndex++] = sample;
+  }
+#endif
 }
 
 /* Call this routine before every "block" (size=N) of samples. */
@@ -218,4 +243,15 @@ void PhoneDTMF::ResetDTMF(void)
     _afQ2[i] = 0;
     _afQ1[i] = 0;
   }
+  _fAdcCentre = 0.0f;
+#ifdef DTMF_DEBUG
+  _iDataIndex = 0;
+#endif
 }
+
+#ifdef DTMF_DEBUG
+uint16_t* PhoneDTMF::getMeasurements()
+{
+  return _aiAnalogData;
+}
+#endif

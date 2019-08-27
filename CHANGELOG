@@ -1,5 +1,10 @@
 phoneDTMF ?.?.? - ????.??.??
 
+phoneDTMF 0.2.0 - 2019.08.27
+* removed 6000Hz as MAX_FREQ
+* ADC center will be updated during measurement
+* Debug mode will give you the result of the last 128 measurements, so you can choose between oscilloscope and spectrum on the OLED example
+
 phoneDTMF 0.1.0 - 2019.08.21
 
 * Initial release
