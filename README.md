@@ -58,7 +58,7 @@ ___
 **`uint16_t getMeasurementTime()`** returns the time, the `detect()` function will need to be executed. It is just a calculation (frequence * samples), it is not measured.  
 
 ### ESP32 tips:
-**Frequence**: even if the sampleFrequence is 25.000-50.000, internally the ADC is sampled with 6000Hz. So, setting this value to a higher frequence does not help you and you will not get a better result (maybe you will measure wrong signals!). So leave it to 6000Hz.  
+
 **analog inputs**: Do not use ADC2 channels if you use WiFi, because they will be disabled. Use one of the ADC1 channels, like A0-A7:  
 ```cpp
 #include <driver/adc.h>
