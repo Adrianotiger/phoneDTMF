@@ -173,15 +173,24 @@ uint16_t PhoneDTMF::getMeasurementTime()
   Private functions:
 */
 
+int PhoneDTMF_cmp(uint32_t *num1, uint32_t *num2)
+{
+	if (*num1 < *num2) return -1;
+	else if (*num1 == *num2) return 0;
+	return 1;
+}
+
 uint8_t PhoneDTMF::calculateMeasurement(float* pRet, float magnitude)
 {
   float dtmf_mag[TONES];
+  uint32_t aidtmf_mag[TONES];
   float maxMag = _fBaseMagnitude * 3.0f;
   float midMag = 0.0f;
   for (uint8_t i = 0; i < TONES; i++)
   {
     dtmf_mag[i] = sqrt(_afQ1[i] * _afQ1[i] + _afQ2[i] * _afQ2[i] - _afToneCoeff[i] * _afQ1[i] * _afQ2[i]);
     midMag += dtmf_mag[i];
+	aidtmf_mag[i]= (uint32_t)dtmf_mag[i];
     if (maxMag < dtmf_mag[i]) maxMag = dtmf_mag[i];
   }
   if (pRet != NULL)
@@ -193,7 +202,20 @@ uint8_t PhoneDTMF::calculateMeasurement(float* pRet, float magnitude)
   uint8_t dtmf = 0;
   if (magnitude < 0.0f) 
   {
-    magnitude = (midMag / TONES) * 2.5f;
+	  // try to calculate the right magnitude
+	  // first: get median (middle)
+	qsort(aidtmf_mag, TONES, sizeof(uint32_t), (int(*)(const void *, const void *)) PhoneDTMF_cmp);
+	  // second: check if there could be valid data. Get 4th value since 7th and 8th should be peaks.
+	if (aidtmf_mag[(TONES / 2) - 1] * 3.0f < (midMag / TONES))
+	{
+	  // YES, there could be a valid data! Set the magnitude to 60% of the second peak
+	  magnitude = aidtmf_mag[TONES - 2] * 0.6f;
+	}
+	else
+	{
+	  // NO, probably there isn't a valid data. Set the magnitude to 2.5 times the mid.
+	  magnitude = (midMag / TONES) * 2.5f;
+	}
   }
 
   for (uint8_t i = 0; i < TONES; i++)

@@ -1,6 +1,6 @@
 {
   "name": "phoneDTMF-arduino",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Arduino Library implementation to detect DTMF on ADC input ",
   "main": "PhoneDTMF.cpp",
   "directories": {

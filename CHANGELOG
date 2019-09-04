@@ -1,5 +1,8 @@
 phoneDTMF ?.?.? - ????.??.??
 
+phoneDTMF 0.3.0 - 2019.09.03
+* better magnitude calculation on low samples
+
 phoneDTMF 0.2.0 - 2019.08.27
 * removed 6000Hz as MAX_FREQ
 * ADC center will be updated during measurement
